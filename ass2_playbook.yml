@@ -19,16 +19,16 @@
         executable: pip3
         state: latest
 
-    - name: uploading the app.py application
+    - name: uploading the application2.py application
       copy:
-        src: ./app.py
+        src: ./application2.py
         dest: /home/ubuntu
         owner: ubuntu
         group: ubuntu
         mode: 0644
 
     - name: Running the application
-      shell: python3 /home/ubuntu/app.py
+      shell: python3 /home/ubuntu/application2.py
       async: 3600
       poll: 0
 
