@@ -1,0 +1,12 @@
+
+- hosts: haproxy
+  gather_facts: yes
+  become: yes
+  tasks:
+    - name: test connectivity
+      shell: "hostname -i"
+      register: result
+      
+    - name: print result
+      debug: 
+        var=result

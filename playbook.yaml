@@ -1,0 +1,63 @@
+---
+- hosts: webservers
+  gather_facts: yes
+  become: yes
+  tasks:
+    - name: Update repositories cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      
+    - name: Installing Python3-pip 
+      apt:
+         name: python3-pip
+         state: present
+         
+    - name: Install flask for Python3 using the 'pip3' executable
+      ansible.builtin.pip:
+        name: flask
+        executable: pip3
+        state: latest
+
+    - name: uploading the application2.py application
+      copy:
+        src: ./application2.py
+        dest: /home/ubuntu
+        owner: ubuntu
+        group: ubuntu
+        mode: 0644
+
+    - name: Running the application
+      shell: python3 /home/ubuntu/application2.py
+      async: 3600 
+      poll: 0
+      
+
+      
+- hosts: haproxy
+  gather_facts: yes
+  become: yes
+  tasks:
+    - name: Upadating repositories cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+    - name: Installing HAproxy
+      apt:
+        name: haproxy
+        state: present
+    - name: uploading haproxy configuration file
+      template:
+        src: ./haproxy.cfg.j2
+        dest: /etc/haproxy/haproxy.cfg
+    - name: Reinitializing HAProxy
+      service:
+        name: haproxy
+        state: restarted
+    - name: Test application  reachability
+      shell: "curl -kv http://localhost:80/apihealth"
+      register: api_health
+      
+    - name: Print application  reachability
+      debug: 
+        var=api_health.stdout_lines

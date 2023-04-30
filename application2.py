@@ -12,7 +12,7 @@ app = flask.Flask(__name__)
 #define route fot the root URL and call the indexed function
 #defien the index function which gets time.
 #return a string with current time/hostname and IP address
-@app.route('/')
+@app.route('/apihealth')
 def index():
     Time= time.strftime("%H:%M:%S")
     return Time+" Serving from "+h_name+" ("+IP_addres+")\n"
