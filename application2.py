@@ -5,6 +5,7 @@ import time
 import socket
 #Get the IP address of the machine the script is running on
 h_name = socket.gethostname()
+fqdn=socket.getfqdn()
 #store it into below IP
 IP_addres = socket.gethostbyname(h_name)
 #flask application intance
@@ -15,7 +16,7 @@ app = flask.Flask(__name__)
 @app.route('/apihealth')
 def index():
     Time= time.strftime("%H:%M:%S")
-    return Time+" Serving from "+h_name+" ("+IP_addres+")\n"
+    return Time+" API server Serving from "+fqdn+" ("+IP_addres+")\n <3 !!\n"
 #run script as main
 #flask dev server port 80
 #all available netwom
