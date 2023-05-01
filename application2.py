@@ -16,7 +16,7 @@ app = flask.Flask(__name__)
 @app.route('/apihealth')
 def index():
     Time= time.strftime("%H:%M:%S")
-    return Time+" API server Serving from "+fqdn+" ("+IP_addres+")\n <3 !!\n"
+    return Time+" API server Serving from "+fqdn+" ("+IP_addres+")\n <3 !\n"
 #run script as main
 #flask dev server port 80
 #all available netwom
