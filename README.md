@@ -27,6 +27,10 @@ uploading the application2.py application on devA/devB/devC (webservers)
 Install  HAproxy 
 uploading HAproxy configuration on the HAproxy server
 
+running commnands
+
+curl http://89.42.140.249:80/
+for i in 1 2 3 4 5 6 7 8 9; do $cmd_curl;done
 
 
 
