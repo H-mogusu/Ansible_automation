@@ -64,3 +64,21 @@
       delegate_to: localhost
       debug: 
         var=api_health.stdout_lines
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        

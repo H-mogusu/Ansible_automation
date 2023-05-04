@@ -1,0 +1,175 @@
+#Example of HAPROXY config 
+#ANMQP loadbalancer for 3 nodes with IP-addresses 10.30.0.10,10.30.0.20,10.30.0.30
+#HTTPS loadbalancer without SSL termination for 2 nodes with IP-addresses 10.30.0.50,10.30.0.60
+#statistics is available at https://haproxyname.yourdomainname.com:10001/stats with adminname:adminpassword credits
+global
+        log /dev/log    local0
+        log /dev/log    local1 notice
+        chroot /var/lib/haproxy
+        stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+        stats timeout 30s
+        user haproxy
+        group haproxy
+        daemon
+
+        # Default SSL material locations
+        ca-base /etc/ssl/certs
+        crt-base /etc/ssl/private
+
+        # See: https://ssl-config.mozilla.org/#server=haproxy&server-version=2.0.3&config=intermediate
+        ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+        ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+        ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
+
+defaults
+        log     global
+        mode    http
+        option  httplog
+        option  dontlognull
+        timeout connect 5000
+        timeout client  50000
+        timeout server  50000
+        errorfile 400 /etc/haproxy/errors/400.http
+        errorfile 403 /etc/haproxy/errors/403.http
+        errorfile 408 /etc/haproxy/errors/408.http
+        errorfile 500 /etc/haproxy/errors/500.http
+        errorfile 502 /etc/haproxy/errors/502.http
+        errorfile 503 /etc/haproxy/errors/503.http
+        errorfile 504 /etc/haproxy/errors/504.http
+
+frontend stats
+        bind *:10001 ssl crt /etc/haproxy/cert/yourdomainname.pem
+        mode http
+        stats enable
+        stats hide-version
+        stats refresh 10s
+        stats show-node
+        stats auth adminname:adminpassword
+        stats uri /stats
+
+frontend main_frontend
+        bind *:443 ssl crt /etc/haproxy/cert/yourdomainname.pem
+        acl ims_acl hdr(host) -i ims.yourdomainname.com
+        acl hub_acl hdr(host) -i hub.yourdomainname.com
+        acl interact_acl hdr(host) -i interact.yourdomainname.com
+        acl audit_acl hdr(host) -i audit.yourdomainname.com
+        acl emailqueue_acl hdr(host) -i emailqueue.yourdomainname.com
+        acl fileserver_acl hdr(host) -i fileserver.yourdomainname.com
+        acl iada_acl hdr(host) -i iada.yourdomainname.com
+        acl interactremoteapi_acl hdr(host) -i interactremoteapi.yourdomainname.com
+        acl licensemanager_acl hdr(host) -i licensemanager.yourdomainname.com
+        acl notificationcenter_acl hdr(host) -i notificationcenter.yourdomainname.com
+        acl signalr_acl hdr(host) -i signalr.yourdomainname.com
+        use_backend ims_backend if ims_acl
+        use_backend hub_backend if hub_acl
+        use_backend interact_backend if interact_acl
+        use_backend audit_backend if audit_acl
+        use_backend emailqueue_backend if emailqueue_acl
+        use_backend fileserver_backend if fileserver_acl
+        use_backend iada_backend if iada_acl
+        use_backend interactremoteapi_backend if interactremoteapi_acl
+        use_backend licensemanager_backend if licensemanager_acl
+        use_backend notificationcenter_backend if notificationcenter_acl
+        use_backend signalr_backend if signalr_acl
+
+frontend amqp_frontend
+        bind *:5672
+        mode tcp
+        option tcplog
+        use_backend amqp_backend
+
+backend amqp_backend
+        mode tcp
+        balance roundrobin
+        server rabbit1 10.30.0.10:5672 check inter 5s
+        server rabbit2 10.30.0.20:5672 check inter 5s
+        server rabbit3 10.30.0.30:5672 check inter 5s
+
+backend ims_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host ims.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend hub_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host hub.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend interact_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host interact.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend audit_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host audit.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend emailqueue_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host emailqueue.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend fileserver_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host fileserver.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend iada_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host iada.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend interactremoteapi_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host interactremoteapi.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend licensemanager_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host licensemanager.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend notificationcenter_backend
+        balance roundrobin
+        option httpchk
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host notificationcenter.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s
+
+backend signalr_backend
+        balance roundrobin
+        option httpchk
+        cookie SERVERID insert indirect nocache
+        http-check send meth GET uri /health ver HTTP/1.1 hdr host signalr.yourdomainname.com
+        http-check expect string Healthy
+        server web1 10.30.0.50:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s cookie web1
+        server web2 10.30.0.60:443 ssl ca-file /etc/haproxy/cert/root.ca check inter 5s cookie web2
